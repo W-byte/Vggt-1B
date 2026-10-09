@@ -1,0 +1,30 @@
+--- a/viz/viewer.py
++++ b/viz/viewer.py
+@@ -24,6 +24,7 @@
+     scene:      SceneResult,
+     semantic:   "Optional[SemanticResult]",
+     output_dir: Path,
++    open_viewer: bool = True,
+ ) -> None:
+     import rerun as rr
+     import rerun.blueprint as rrb
+@@ -65,7 +66,7 @@
+         rr.set_time("frame", sequence=s)
+ 
+         rr.log("camera/rgb",   rr.Image(result.images[s]))
+-        rr.log("camera/depth", rr.DepthImage(result.depth[s], meter=1.0))
++        rr.log("camera/depth", rr.DepthImage(result.depth[s]))
+ 
+         R = c2w[s, :3, :3]
+         t = c2w[s, :3, 3]
+@@ -113,7 +114,10 @@
+                rr.Points3D(positions=sem_pts, class_ids=class_ids, radii=0.003))
+         _log_semantic_overlay(result, semantic, S - 1)
+ 
++    rr.disconnect()
+     print(f"  Saved → {rrd_path}")
++    if not open_viewer:
++        return
+ 
+     # ── Open viewer ───────────────────────────────────────────────────────────
+     print(f"  Opening Rerun viewer...")

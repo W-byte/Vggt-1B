@@ -1,0 +1,29 @@
+--- a/run.py
++++ b/run.py
+@@ -220,6 +220,14 @@
+     ply_path = args.output / "scene.ply"
+     o3d.io.write_point_cloud(str(ply_path), scene.point_cloud)
+     console.print(f"  [green]✓[/green] Point cloud     → {ply_path}")
++    np.savez_compressed(
++        args.output / "reconstruction.npz",
++        images=result.images, world_points=result.world_points,
++        world_points_conf=result.world_points_conf,
++        depth=result.depth, depth_conf=result.depth_conf,
++        extrinsics=result.extrinsics, intrinsics=result.intrinsics,
++        frame_paths=np.array([str(p) for p in result.frame_paths]),
++    )
+ 
+     if semantic is not None:
+         sem_path = args.output / "scene_semantic.ply"
+@@ -347,8 +355,9 @@
+         },
+         "results": {
+             "n_points":           len(pts),
+-            "bbox_volume_m3":     round(vol, 4),
+-            "avg_nn_dist_m":      round(avg_nn, 6),
++            "scale":              "relative; not calibrated to metres",
++            "bbox_volume_model_units3": round(vol, 4),
++            "avg_nn_dist_model_units": round(avg_nn, 6),
+             **geo_metrics,
+             "n_semantic_classes": len(set(semantic.labels)) if semantic else None,
+             "semantic_view_agreement": (round(semantic.view_agreement, 4)

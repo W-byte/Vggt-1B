@@ -1,0 +1,43 @@
+--- a/pipeline/reconstruct.py
++++ b/pipeline/reconstruct.py
+@@ -13,6 +13,7 @@
+ from __future__ import annotations
+ from dataclasses import dataclass
+ from pathlib import Path
++import os
+ 
+ import numpy as np
+ import torch
+@@ -76,12 +77,29 @@
+     from vggt.utils.load_fn import load_and_preprocess_images
+     from vggt.utils.pose_enc import pose_encoding_to_extri_intri
+ 
+-    console.print("  Loading [bold]VGGT-1B[/bold] from HuggingFace (~5 GB first run)...")
+-    model = VGGT.from_pretrained("facebook/VGGT-1B")
++    checkpoint = os.environ.get("VGGT_CHECKPOINT")
++    if checkpoint:
++        from safetensors.torch import load_file
++        console.print(f"  Loading local [bold]VGGT-1B[/bold]: {checkpoint}")
++        model = VGGT()
++        model.load_state_dict(load_file(checkpoint), strict=True)
++    else:
++        console.print("  Loading [bold]VGGT-1B[/bold] from HuggingFace (~5 GB first run)...")
++        model = VGGT.from_pretrained("facebook/VGGT-1B")
+     model = model.to(device).eval()
+ 
+     image_names = [str(p) for p in frame_paths]
+-    images = load_and_preprocess_images(image_names).to(device)   # (S, 3, H, W)
++    images = load_and_preprocess_images(image_names)   # (S, 3, H, W)
++    if image_size < 14 or image_size % 14:
++        raise ValueError("--image-size must be a positive multiple of 14 (e.g. 392 or 518)")
++    if image_size != 518:
++        height = max(14, round(images.shape[-2] * image_size / images.shape[-1] / 14) * 14)
++        images = torch.nn.functional.interpolate(
++            images, size=(height, image_size), mode="bilinear", align_corners=False,
++            antialias=True,
++        )
++    images = images.to(device)
++    console.print(f"  Inference input: {tuple(images.shape)}")
+ 
+     with torch.inference_mode(), autocast_ctx(device, dtype):
+         predictions = model(images)
